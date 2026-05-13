@@ -5,7 +5,7 @@ from pathlib import Path
 
 # Adiciona o diretório ao path para importar o módulo
 sys.path.insert(0, str(Path(__file__).parent))
-from organizador_arquivos import organizar_arquivos
+from organizador_arquivos import organizar_arquivos_upload
 
 class StreamlitHandler(logging.Handler):
     """Handler customizado para exibir os logs na tela do Streamlit"""
@@ -21,56 +21,41 @@ class StreamlitHandler(logging.Handler):
 
 def main():
     st.set_page_config(page_title="Organizador de NFs", page_icon="📁", layout="centered")
-    
+
     st.title("📁 Organizador de Notas Fiscais e Boletos")
-    st.write("Esta ferramenta organiza arquivos XML e PDF baixados, agrupando-os por Chave da Nota Fiscal em pastas correspondentes.")
+    st.write("Esta ferramenta organiza arquivos XML e PDF, agrupando-os por Chave da Nota Fiscal em pastas correspondentes.")
 
-    # Input do caminho da pasta
-    st.write("**Caminho da pasta com os arquivos:**")
-    pasta_origem = st.text_input(
-        "Cole o caminho completo da pasta aqui",
-        value="",
-        placeholder="Ex: C:\\Users\\Nome\\Downloads\\GLORIAN",
-        label_visibility="collapsed"
-    ).strip()
+    # Upload de arquivos
+    st.subheader("📤 Faça Upload dos Arquivos")
+    uploaded_files = st.file_uploader(
+        "Selecione os arquivos XML e PDF",
+        type=["xml", "pdf"],
+        accept_multiple_files=True,
+        help="Você pode selecionar vários arquivos de uma vez"
+    )
 
-    st.info("💡 **Dica:** No Windows, abra a pasta, clique na barra de endereço e copie o caminho completo.")
+    if uploaded_files:
+        st.info(f"✅ {len(uploaded_files)} arquivo(s) selecionado(s)")
 
-    if st.button("Organizar Arquivos", type="primary"):
-        if not pasta_origem:
-            st.warning("Por favor, informe o caminho da pasta.")
-            return
-
-        # Remove aspas caso o usuário tenha colado com aspas
-        pasta_origem = pasta_origem.strip('"\'')
-
-        path = Path(pasta_origem)
-        if not path.exists():
-            st.error(f"❌ Erro: A pasta '{pasta_origem}' não existe!\n\nVerifique se:\n- O caminho está correto\n- A pasta existe\n- Não há caracteres especiais ou espaços não permitidos")
-            return
-            
-        if not path.is_dir():
-            st.error(f"❌ Erro: O caminho '{pasta_origem}' não é uma pasta válida!")
+    if st.button("Organizar Arquivos", type="primary", disabled=not uploaded_files):
+        if not uploaded_files:
+            st.warning("Por favor, faça upload de pelo menos um arquivo.")
             return
 
         st.success("Iniciando organização...")
-        
+
         # Container para os logs
-        st.subheader("Logs da Execução")
-        
-        # Usamos uma caixa de texto scrollável para os logs (st.code ou st.text dentro de um container)
-        log_container = st.container()
-        with log_container:
-            log_placeholder = st.empty()
-        
-        # Configura o logger para jogar a saída no Streamlit
+        st.subheader("📋 Logs da Execução")
+        log_placeholder = st.empty()
+
+        # Configura o logger
         logger = logging.getLogger("streamlit_logger")
         logger.setLevel(logging.INFO)
-        
-        # Limpa os handlers antigos caso o botão seja clicado várias vezes
+
+        # Limpa os handlers antigos
         if logger.hasHandlers():
             logger.handlers.clear()
-            
+
         sl_handler = StreamlitHandler(log_placeholder)
         formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
         sl_handler.setFormatter(formatter)
@@ -78,11 +63,24 @@ def main():
 
         with st.spinner("Organizando os arquivos..."):
             try:
-                organizar_arquivos(str(path), logger)
+                # Processa os arquivos e gera ZIP
+                zip_content = organizar_arquivos_upload(uploaded_files, logger)
+
                 st.balloons()
                 st.success("✅ Organização concluída com sucesso!")
+
+                # Botão para download
+                st.subheader("📥 Download")
+                st.download_button(
+                    label="⬇️ Baixar Arquivos Organizados (ZIP)",
+                    data=zip_content,
+                    file_name="arquivos_organizados.zip",
+                    mime="application/zip",
+                    use_container_width=True
+                )
+
             except Exception as e:
-                st.error(f"Ocorreu um erro durante a organização: {e}")
+                st.error(f"❌ Ocorreu um erro durante a organização: {e}")
 
 if __name__ == "__main__":
     main()
