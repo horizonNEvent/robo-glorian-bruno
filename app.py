@@ -26,16 +26,27 @@ def main():
     st.write("Esta ferramenta organiza arquivos XML e PDF baixados, agrupando-os por Chave da Nota Fiscal em pastas correspondentes.")
 
     # Input do caminho da pasta
-    pasta_origem = st.text_input("Caminho da pasta com os arquivos:", value=r"D:\Downloads\glorian")
+    st.write("**Caminho da pasta com os arquivos:**")
+    pasta_origem = st.text_input(
+        "Cole o caminho completo da pasta aqui",
+        value="",
+        placeholder="Ex: C:\\Users\\Nome\\Downloads\\GLORIAN",
+        label_visibility="collapsed"
+    ).strip()
+
+    st.info("💡 **Dica:** No Windows, abra a pasta, clique na barra de endereço e copie o caminho completo.")
 
     if st.button("Organizar Arquivos", type="primary"):
         if not pasta_origem:
             st.warning("Por favor, informe o caminho da pasta.")
             return
-            
+
+        # Remove aspas caso o usuário tenha colado com aspas
+        pasta_origem = pasta_origem.strip('"\'')
+
         path = Path(pasta_origem)
         if not path.exists():
-            st.error(f"❌ Erro: A pasta '{pasta_origem}' não existe!")
+            st.error(f"❌ Erro: A pasta '{pasta_origem}' não existe!\n\nVerifique se:\n- O caminho está correto\n- A pasta existe\n- Não há caracteres especiais ou espaços não permitidos")
             return
             
         if not path.is_dir():
